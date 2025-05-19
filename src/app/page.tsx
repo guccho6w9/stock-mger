@@ -21,7 +21,7 @@ export default function Home() {
   const [modalTitle, setModalTitle] = useState("");
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
-  const [form, setForm] = useState({
+  const [form] = useState({
     name: "",
     price: "",
   });
@@ -107,17 +107,7 @@ export default function Home() {
     }
   };
 
-  const handleAdjustSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentProduct) return;
-    await fetch(`/api/products/${currentProduct.id}`, {
-      method: "PUT",
-      body: JSON.stringify({ name: form.name, price: parseFloat(form.price) }),
-      headers: { "Content-Type": "application/json" },
-    });
-    closeModal();
-    fetchProducts();
-  };
+ 
 
 
   const showCreateForm = () => {
