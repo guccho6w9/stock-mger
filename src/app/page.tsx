@@ -43,8 +43,27 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    const fetchAndFilter = async () => {
+      const res = await fetch(`/api/products?page=${page}`);
+      const data = await res.json();
+
+      const normalize = (text: string) =>
+        text
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+
+      const filtered = data.products.filter((product: Product) =>
+        normalize(product.name).includes(normalize(search))
+      );
+
+      setProducts(filtered);
+      setTotal(data.total); // O puedes usar filtered.length si paginas manualmente
+    };
+
+    fetchAndFilter();
   }, [search, page]);
+
 
   const handleCheck = (id: string) => {
     setSelected((prev) =>
@@ -127,50 +146,187 @@ export default function Home() {
       </div>
     );
   };
-  
+  const AdjustProductForm = ({
+    product,
+    closeModal,
+    fetchProducts,
+  }: {
+    product: Product;
+    closeModal: () => void;
+    fetchProducts: () => void;
+  }) => {
+    const [mode, setMode] = useState<"percentage" | "replace">("replace");
+    const [priceValue, setPriceValue] = useState("");
 
-  const showAdjustForm = (product: Product) => {
-    setForm({ name: product.name, price: product.price.toString() });
-    setCurrentProduct(product);
-    openModal(
-      "Ajustar Producto",
-      <form onSubmit={handleAdjustSubmit} className="flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="ajustar producto"
-          className="border p-2 rounded text-black bg-white"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          required
-        />
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const num = parseFloat(priceValue);
+      if (isNaN(num)) return alert("Ingresa un número válido");
+
+      const newPrice =
+        mode === "percentage"
+          ? product.price + (product.price * num) / 100
+          : num;
+
+      await fetch(`/api/products/${product.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ name: product.name, price: newPrice }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      closeModal();
+      fetchProducts();
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <p className="font-semibold">Ajustar precio de <strong>{product.name}</strong></p>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="percentage"
+            checked={mode === "percentage"}
+            onChange={() => setMode("percentage")}
+          />
+          Ajustar por porcentaje (%)
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="replace"
+            checked={mode === "replace"}
+            onChange={() => setMode("replace")}
+          />
+          Reemplazar por precio fijo
+        </label>
         <input
           type="number"
+          step="any"
+          placeholder={mode === "percentage" ? "Ej: 10 o -15" : "Ej: 1200"}
           className="border p-2 rounded"
-          value={form.price}
-          onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+          value={priceValue}
+          onChange={(e) => setPriceValue(e.target.value)}
           required
         />
-        <button type="submit" className="bg-yellow-600 text-white py-2 rounded">
-          Actualizar
+        <button
+          type="submit"
+          className="bg-yellow-600 text-white py-2 rounded font-semibold"
+        >
+          Aplicar ajuste
         </button>
       </form>
     );
   };
 
-  const showBatchAdjustMessage = () =>
+
+  const showAdjustForm = (product: Product) => {
+    setCurrentProduct(product);
+    openModal(
+      `Ajustar: ${product.name}`,
+      <AdjustProductForm
+        product={product}
+        closeModal={closeModal}
+        fetchProducts={fetchProducts}
+      />
+    );
+  };
+
+  const BatchAdjustForm = ({
+    selected,
+    products,
+    closeModal,
+    fetchProducts,
+  }: {
+    selected: string[];
+    products: Product[];
+    closeModal: () => void;
+    fetchProducts: () => void;
+  }) => {
+    const [mode, setMode] = useState<"percentage" | "replace">("percentage");
+    const [value, setValue] = useState("");
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const num = parseFloat(value);
+      if (isNaN(num)) return alert("Ingresa un número válido");
+
+      for (const id of selected) {
+        const product = products.find((p) => p.id === id);
+        if (!product) continue;
+
+        const newPrice =
+          mode === "percentage"
+            ? product.price + (product.price * num) / 100
+            : num;
+
+        await fetch(`/api/products/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: product.name, price: newPrice }),
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      closeModal();
+      fetchProducts();
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="percentage"
+            checked={mode === "percentage"}
+            onChange={() => setMode("percentage")}
+          />
+          Ajustar por porcentaje (%)
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="replace"
+            checked={mode === "replace"}
+            onChange={() => setMode("replace")}
+          />
+          Reemplazar por precio fijo
+        </label>
+        <input
+          type="number"
+          step="any"
+          placeholder={mode === "percentage" ? "Ej: 10 o -15" : "Ej: 1200"}
+          className="border p-2 rounded"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          required
+        />
+        <button
+          type="submit"
+          className="bg-yellow-600 text-white py-2 rounded font-semibold"
+        >
+          Aplicar ajuste
+        </button>
+      </form>
+    );
+  };
+
+
+  const showBatchAdjustMessage = () => {
     openModal(
       "Ajustar Seleccionados",
-      <div>
-        {selected.length > 0 ? (
-          <p>
-            Se pueden ajustar {selected.length} productos. (Función por
-            implementar)
-          </p>
-        ) : (
-          <p>No hay productos seleccionados.</p>
-        )}
-      </div>
+      selected.length > 0 ? (
+        <BatchAdjustForm
+          selected={selected}
+          products={products}
+          closeModal={closeModal}
+          fetchProducts={fetchProducts}
+        />
+      ) : (
+        <p>No hay productos seleccionados.</p>
+      )
     );
+  };
+
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -247,9 +403,8 @@ export default function Home() {
           <button
             key={n}
             onClick={() => setPage(n + 1)}
-            className={`px-3 py-1 border rounded ${
-              page === n + 1 ? "bg-black text-white" : ""
-            }`}
+            className={`px-3 py-1 border rounded ${page === n + 1 ? "bg-black text-white" : ""
+              }`}
           >
             {n + 1}
           </button>
