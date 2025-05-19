@@ -21,10 +21,7 @@ export default function Home() {
   const [modalTitle, setModalTitle] = useState("");
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
-  const [form] = useState({
-    name: "",
-    price: "",
-  });
+  
   /*const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({
@@ -33,7 +30,7 @@ export default function Home() {
     }));
   };
   */
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [setCurrentProduct] = useState<Product | null>(null);
 
   const fetchProducts = async () => {
     const res = await fetch(`/api/products?q=${search}&page=${page}`);
