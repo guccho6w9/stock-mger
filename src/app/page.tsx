@@ -25,14 +25,14 @@ export default function Home() {
     name: "",
     price: "",
   });
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /*const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
-
+  */
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
 
   const fetchProducts = async () => {
@@ -63,7 +63,7 @@ export default function Home() {
     setModalVisible(true);
   };
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  /*const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await fetch("/api/products", {
@@ -80,7 +80,7 @@ export default function Home() {
       console.error("Error creating product:", error);
     }
   };
-
+  */
   const handleDelete = async (id: string) => {
     if (confirm("¿Estás seguro de que deseas borrar este producto?")) {
       await fetch(`/api/products/${id}`, { method: "DELETE" });
